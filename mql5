@@ -1,0 +1,135 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                              Sydney MT5.mq5      |
+//|                               Copyright 2021, Forex Robot Easy Team|
+//|                                   https://www.forexroboteasy.com |
+//+------------------------------------------------------------------+
+
+// Define input parameters
+input double LotSize = 0.01; // Lot size for trading
+input int StopLoss = 20; // Stop loss in pips
+input int TakeProfit = 40; // Take profit in pips
+
+// Define global variables
+int ticket; // Order ticket number
+double currentPrice; // Current market price
+double stopLossPrice; // Stop loss price
+double takeProfitPrice; // Take profit price
+
+//+------------------------------------------------------------------+
+//| Custom indicator function for identifying trading opportunities   |
+//+------------------------------------------------------------------+
+int FindOpportunity()
+{
+    // Add your algorithm and trading strategy here
+    // Return 1 if a trading opportunity is found, otherwise return 0
+    // For example, you can use moving averages, RSI, or any other indicator
+    
+    return 1; // Placeholder for demonstration purposes
+}
+
+//+------------------------------------------------------------------+
+//| Opening a market order                                            |
+//+------------------------------------------------------------------+
+void OpenOrder(int type)
+{
+    RefreshRates(); // Refresh rates before opening an order
+    
+    // Check if a trading opportunity is available
+    if(FindOpportunity())
+    {
+        // Calculate stop loss and take profit prices
+        stopLossPrice = type == OP_BUY ? currentPrice - StopLoss * _Point : currentPrice + StopLoss * _Point;
+        takeProfitPrice = type == OP_BUY ? currentPrice + TakeProfit * _Point : currentPrice - TakeProfit * _Point;
+        
+        // Open a market order
+        ticket = OrderSend(Symbol(), type, LotSize, currentPrice, 0, stopLossPrice, takeProfitPrice, 'Sydney MT5', MagicNumber, 0, clrNONE);
+        
+        if(ticket > 0)
+        {
+            // Order opened successfully
+            Print('Order opened: ticket=', ticket, ', type=', (type == OP_BUY ? 'BUY' : 'SELL'));
+        }
+        else
+        {
+            // Order opening failed
+            Print('Order opening failed with error code', GetLastError());
+        }
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Closing an existing order                                         |
+//+------------------------------------------------------------------+
+void CloseOrder(int ticket)
+{
+    // Check if the order is still open
+    if(OrderSelect(ticket, SELECT_BY_TICKET))
+    {
+        // Close the order
+        bool result = OrderClose(ticket, OrderLots(), Bid, 0, clrNONE);
+        
+        if(result)
+        {
+            // Order closed successfully
+            Print('Order closed: ticket=', ticket);
+        }
+        else
+        {
+            // Order closing failed
+            Print('Order closing failed with error code', GetLastError());
+        }
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Expert Advisor initialization function                            |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Set up necessary parameters and indicators here
+    
+    return INIT_SUCCEEDED;
+}
+
+//+------------------------------------------------------------------+
+//| Expert Advisor start function                                     |
+//+------------------------------------------------------------------+
+void OnStart()
+{
+    // Loop through all open orders and close them
+    for(int i = OrdersTotal() - 1; i >= 0; i--)
+    {
+        OrderSelect(i, SELECT_BY_POS, MODE_TRADES);
+        CloseOrder(OrderTicket());
+    }
+    
+    // Loop until the expert advisor is stopped
+    while(!IsStopped())
+    {
+        RefreshRates(); // Refresh rates before checking for trading opportunities
+        currentPrice = Bid; // Use Bid price for simplicity
+        
+        // Check for trading opportunities
+        if(FindOpportunity())
+        {
+            // Open a buy order
+            OpenOrder(OP_BUY);
+            
+            // Open a sell order
+            OpenOrder(OP_SELL);
+        }
+        
+        Sleep(1000); // Sleep for 1 second before checking for trading opportunities again
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Expert Advisor deinitialization function                         |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    // Perform any necessary cleanup here
+}
+
+//+------------------------------------------------------------------+
